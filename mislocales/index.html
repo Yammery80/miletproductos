@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milet Productos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<body>
+
+<!-- ======== LOGIN ======== -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>milet<span>productos</span></h1>
+    <p>Selecciona tu sucursal e ingresa tu PIN</p>
+
+    <div class="login-users" id="login-users-list">
+      <!-- generado por JS -->
+    </div>
+
+    <div class="pin-area" id="pin-area" style="display:none;">
+      <label>PIN de acceso</label>
+      <div class="pin-row">
+        <input type="password" id="pin-input" maxlength="4" placeholder="••••" inputmode="numeric">
+        <button class="btn btn-primary" onclick="verificarPin()">Entrar</button>
+      </div>
+      <p class="pin-err" id="pin-err">PIN incorrecto</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======== APP ======== -->
+<div id="app">
+
+<!-- MODAL SIN STOCK -->
+<div id="modal-sin-stock" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;
+    padding:28px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;margin-bottom:8px;">📦</div>
+      <h3 style="font-family:'Syne',sans-serif;font-size:16px;margin-bottom:6px;" id="modal-prod-nombre">Producto</h3>
+      <p style="font-size:13px;color:var(--muted);">Este producto existe en el inventario pero <strong style="color:var(--red);">no tiene stock disponible</strong>.</p>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;text-align:center;">¿Deseas agregar unidades al inventario ahora?</p>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;justify-content:center;">
+      <label style="font-size:13px;color:var(--muted);">Agregar:</label>
+      <input type="number" id="modal-qty" min="1" value="1"
+        style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+               padding:8px 12px;color:var(--text);font-size:15px;text-align:center;">
+      <span style="font-size:13px;color:var(--muted);">unidades</span>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmarAgregarStock()">Agregar al inventario</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="cerrarModalSinStock()">Cancelar</button>
+    </div>
+  </div>
+</div>
+  <!-- MODAL PRODUCTO NUEVO -->
+<div id="modal-prod-nuevo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="font-family:'Syne',sans-serif;font-size:16px;">➕ Agregar producto al inventario</h3>
+      <button onclick="cerrarModalProdNuevo()" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">Campos obligatorios: SKU/Código, Nombre, Precio y Categoría.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field"><label>SKU / Código *</label><input id="mn-sku" placeholder="Ej: COC-600" style="width:100%;"></div>
+      <div class="field"><label>Nombre *</label><input id="mn-nombre" placeholder="Nombre del producto" style="width:100%;"></div>
+      <div class="field"><label>Categoría *</label><select id="mn-cat" style="width:100%;"><option value="">Sin categoría</option></select></div>
+      <div class="field"><label>Precio venta ($) *</label><input id="mn-precio" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Opcionales (puedes completar después):</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="field"><label>Cantidad inicial</label><input id="mn-qty" type="number" min="0" value="0" style="width:100%;"></div>
+          <div class="field"><label>Stock mínimo</label><input id="mn-min" type="number" min="0" value="0" style="width:100%;"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Costo ($)</label><input id="mn-costo" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmarProdNuevo()">Agregar al inventario</button>
+      <button class="btn btn-ghost" onclick="cerrarModalProdNuevo()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CADUCIDAD PROMO -->
+<div id="modal-caduca" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:600;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid rgba(245,158,11,.3);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:40px;margin-bottom:10px;">⚠️</div>
+      <h3 style="font-family:'Syne',sans-serif;font-size:17px;color:var(--amber);margin-bottom:8px;">Productos próximos a caducar</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;" id="modal-caduca-lista"></p>
+    </div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:16px;margin-bottom:20px;">
+      <p style="font-size:13px;font-weight:500;color:var(--amber);margin-bottom:6px;">💡 Recuerda:</p>
+      <p style="font-size:13px;color:var(--text);line-height:1.6;">Empieza a generar una <strong>promoción</strong> para estos productos y recuerda <strong>mandarla antes a Meri para que la apruebe</strong> antes de publicarla.</p>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="cerrarModalCaduca()">Entendido ✓</button>
+  </div>
+</div>
+
+<!-- MODAL LOTES -->
+<div id="modal-lotes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:600;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:0;max-width:500px;width:100%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <!-- Header -->
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:16px;" id="lotes-prod-nombre">Lotes</h3>
+        <p style="font-size:11px;color:var(--muted);margin-top:2px;">Registra cada entrada de mercancía con su fecha de caducidad</p>
+      </div>
+      <button onclick="cerrarModalLotes()" style="background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:4px;">✕</button>
+    </div>
+    <!-- Lotes list -->
+    <div style="flex:1;overflow-y:auto;padding:16px 24px;" id="lotes-lista"></div>
+    <!-- Add lote form -->
+    <div style="padding:16px 24px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg3);">
+      <p style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">Agregar nuevo lote</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
+        <div class="field" style="margin:0;">
+          <label>Cantidad</label>
+          <input id="lote-qty" type="number" min="1" placeholder="0" style="width:100%;">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Fecha caducidad</label>
+          <input id="lote-caduca" type="date" style="width:100%;">
+        </div>
+        <button class="btn btn-primary" onclick="agregarLote()" style="white-space:nowrap;">+ Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN / ÉXITO -->
+<div id="modal-ok" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;
+  align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)cerrarModalOk()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;
+    padding:32px 28px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="font-size:44px;margin-bottom:12px;" id="modal-ok-icon">✅</div>
+    <h3 style="font-family:'Syne',sans-serif;font-size:17px;margin-bottom:8px;" id="modal-ok-titulo">¡Listo!</h3>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;" id="modal-ok-msg"></p>
+    <button class="btn btn-primary" style="margin-top:20px;width:100%;" onclick="cerrarModalOk()" id="modal-ok-btn">Continuar</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand">milet<span>productos</span></div>
+      <div class="user-pill">
+        <div class="avatar" id="nav-avatar"></div>
+        <span id="nav-username"></span>
+      </div>
+    </div>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:10px;">
+      <div id="alert-bell" style="position:relative;cursor:pointer;" onclick="toggleAlertas()">
+        <span style="font-size:20px;line-height:1;">🔔</span>
+        <span id="alert-count" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;">0</span>
+      </div>
+      <button id="btn-excel" class="btn-logout" onclick="exportarExcel()" style="border-color:rgba(16,185,129,0.4);color:#10b981;" title="Exportar inventario a Excel">⬇ Excel</button>
+      <div id="notif-badge" class="notif-badge" style="display:none;">0</div>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+    <!-- Alert drawer -->
+    <div id="alert-drawer" style="display:none;position:fixed;top:60px;right:16px;width:300px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5);max-height:380px;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);">
+        <span style="font-size:13px;font-weight:500;">Alertas</span>
+        <button onclick="limpiarAlertas()" style="font-size:11px;color:var(--muted);background:transparent;border:none;cursor:pointer;">Limpiar todo</button>
+      </div>
+      <div id="alert-list" style="padding:4px 0;"></div>
+    </div>
+
+  <!-- TABS -->
+  <div class="tabs" id="main-tabs">
+    <button class="tab active" onclick="setTab('dashboard',this)">Dashboard</button>
+    <button class="tab" onclick="setTab('inventario',this)">Inventario</button>
+    <button class="tab tab-cats" onclick="setTab('categorias',this)">Categorías</button>
+    <button class="tab tab-caduca" onclick="setTab('caducidad',this)">🕐 Caducidad</button>
+    <button class="tab" onclick="setTab('ventas',this)">Ventas</button>
+    <button class="tab tab-corte" onclick="setTab('corte',this)">Corte de caja</button>
+    <button class="tab" onclick="setTab('traspasos',this)">Traspasos</button>
+    <button class="tab" onclick="setTab('historial',this)">Historial</button>
+    <button class="tab tab-compare" onclick="setTab('comparar',this)">Comparar</button>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <section id="s-dashboard" class="active">
+      <div class="config-banner" id="firebase-banner" style="display:none;">
+        <h3>⚠️ Configura Firebase para activar la nube</h3>
+        <p>Edita este archivo y reemplaza los valores en <code>FIREBASE_CONFIG</code> con los de tu proyecto. Ve las instrucciones al final de la página.</p>
+      </div>
+      <div class="local-tabs" id="dash-local-tabs" style="display:none;margin-bottom:16px;gap:8px;flex-wrap:wrap;"></div>
+      <p style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;min-height:22px;" id="dash-local-label"></p>
+
+      <!-- KPI row -->
+      <div class="stats-grid" id="dash-stats"></div>
+
+      <!-- Charts + stock row -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
+          <div class="card-title">Ventas por día — últimos 30 días</div>
+          <div style="position:relative;height:200px;"><canvas id="dash-chart"></canvas></div>
+          <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;" id="dash-chart-legend"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">⏰ Próximos a caducar</div>
+          <div id="dash-caduca-list"></div>
+          <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
+            <p style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">Stock crítico</p>
+            <div id="dash-stock-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acumulados por mes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;" id="dash-mensual-row">
+        <div class="card">
+          <div class="card-title">Acumulado del mes actual</div>
+          <div id="dash-mes-stats"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Productos más vendidos</div>
+          <div id="dash-top-productos"></div>
+        </div>
+      </div>
+
+      <!-- Histórico mensual (admin only) -->
+      <div class="card" id="dash-historico-card" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">Histórico mensual por local</div>
+          <select id="dash-mes-sel" onchange="renderDashHistorico()" style="font-size:12px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);"></select>
+        </div>
+        <div id="dash-historico-tabla"></div>
+      </div>
+    </section>
+
+    <!-- CATEGORÍAS -->
+    <section id="s-categorias">
+      <h2 class="sec-title">Categorías</h2>
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;">
+        <div class="card">
+          <div class="card-title">Nueva categoría</div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Nombre</label>
+            <input id="cat-nombre" placeholder="Ej: Bebidas, Botanas..." style="width:100%;">
+          </div>
+          <div class="field" style="margin-bottom:12px;">
+            <label>Color (opcional)</label>
+            <input id="cat-color" type="color" value="#3b82f6" style="width:100%;height:36px;padding:2px;cursor:pointer;">
+          </div>
+          <button class="btn btn-primary" style="width:100%;" onclick="agregarCategoria()">+ Agregar</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Categorías registradas</div>
+          <div id="cats-lista"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CADUCIDAD -->
+    <section id="s-caducidad">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+        <div>
+          <h2 class="sec-title" style="margin:0;">Productos por caducar</h2>
+          <p style="font-size:12px;color:var(--muted);margin-top:3px;">Productos que caducan en los próximos 30 días</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="font-size:12px;color:var(--muted);">Mostrar locales:</label>
+          <div class="local-tabs" id="cad-local-tabs" style="margin:0;"></div>
+        </div>
+      </div>
+      <div id="cad-lista"></div>
+    </section>
+
+    <!-- INVENTARIO -->
+    <section id="s-inventario">
+      <div class="local-tabs" id="inv-local-tabs"></div>
+
+      <!-- EXPORT / IMPORT BAR -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+        <button class="btn btn-ghost" onclick="exportarExcel()" style="display:flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar Excel
+        </button>
+        <label class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Importar Excel
+          <input type="file" id="imp-xlsx" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importarExcel(this)">
+        </label>
+        <span style="font-size:11px;color:var(--muted);">Columnas aceptadas: nombre, cantidad, categoría, costo, precio, stock_minimo</span>
+      </div>
+
+      <!-- IMPORT PREVIEW MODAL -->
+      <div id="imp-preview" style="display:none;" class="card" style="border:1px solid var(--amber);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div>
+            <p style="font-size:13px;font-weight:500;" id="imp-summary"></p>
+            <p style="font-size:11px;color:var(--muted);margin-top:2px;">Revisa antes de confirmar</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="confirmarImport()">Confirmar importación</button>
+            <button class="btn btn-ghost btn-sm" onclick="cancelarImport()">Cancelar</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Costo</th><th>Precio</th><th>Acción</th></tr></thead>
+          <tbody id="imp-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <div class="card" id="inv-form-card">
+        <div class="card-title">Agregar producto</div>
+        <div class="form-grid">
+          <div class="field" style="position:relative;">
+              <label>Nombre</label>
+              <input id="i-nombre" placeholder="Ej: Coca Cola 600ml" autocomplete="off"
+                oninput="sugerirProducto(this.value)"
+                style="width:100%;">
+              <div id="i-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;z-index:50;max-height:160px;overflow-y:auto;margin-top:4px;"></div>
+            </div>
+            <div class="field"><label>SKU / Código</label><input id="i-sku" placeholder="Ej: COC-600 (opcional)"></div>
+          <div class="field">
+             <label>Categoría</label>
+              <select id="i-cat" style="width:100%;">
+                <option value="">Sin categoría</option>
+              </select>
+            </div>
+          <div class="field"><label>Cantidad</label><input id="i-qty" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Stock mínimo</label><input id="i-min" type="number" min="0" placeholder="5"></div>
+          <div class="field"><label>Costo ($)</label><input id="i-costo" type="number" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Precio venta ($)</label><input id="i-precio" type="number" step="0.01" placeholder="0.00"></div>
+        </div>
+        <button class="btn btn-primary" onclick="agregarProducto()">+ Agregar producto</button>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div class="card-title" id="inv-table-title" style="margin:0;">Inventario</div>
+          <input id="inv-search" type="text" placeholder="🔍 Buscar producto..." autocomplete="off"
+            oninput="filtrarInventario(this.value)"
+            style="width:220px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;outline:none;">
+        </div>
+        <div id="inv-content"></div>
+        <div class="tbl-wrap" style="display:none;">
+          <table><thead><tr><th>SKU</th><th>Producto</th><th>Cat.</th><th>Cantidad</th><th>Mín</th><th id="inv-th-costo">Costo</th><th>Precio</th><th>Estado</th><th id="inv-actions-th"></th></tr></thead>
+          <tbody id="inv-tbody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VENTAS -->
+    <section id="s-ventas">
+      <div class="local-tabs" id="vta-local-tabs" style="display:none;margin-bottom:14px;gap:8px;"></div>
+      <div class="card" id="vta-form-card">
+        <div class="card-title">Registrar venta</div>
+        <div class="form-grid">
+          <div class="field" style="position:relative;">
+            <label>Producto</label>
+            <input id="v-buscar" placeholder="Buscar por nombre o SKU..." autocomplete="off"
+              oninput="buscarProductoVenta(this.value)"
+              onfocus="buscarProductoVenta(this.value)"
+              style="width:100%;">
+            <input type="hidden" id="v-producto">
+            <div id="v-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;z-index:50;max-height:200px;overflow-y:auto;margin-top:4px;"></div>
+          </div>
+          <div class="field"><label>Cantidad</label><input id="v-qty" type="number" min="1" placeholder="1"></div>
+          <div class="field"><label>Precio unitario ($)</label><input id="v-precio" type="number" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Fecha y hora</label><input id="v-fecha" type="datetime-local" style="width:100%;"></div>
+        </div>
+        <button class="btn btn-primary" onclick="registrarVenta()">Registrar venta</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Historial de ventas — <span id="vta-local-label"></span></div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>Fecha</th><th>Producto</th><th>Qty</th><th>Precio</th><th id="vta-th-total">Total</th><th></th></tr></thead>
+          <tbody id="vta-tbody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORTE DE CAJA -->
+    <section id="s-corte">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <h2 class="sec-title" style="margin-bottom:2px;">Corte de caja</h2>
+          <p style="font-size:12px;color:var(--muted);">Resumen de ventas por día y departamento</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <div class="field" style="margin:0;">
+            <input type="date" id="corte-fecha" style="width:160px;">
+          </div>
+          <button class="btn btn-ghost" onclick="imprimirCorte()">🖨 Imprimir</button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="stats-grid" id="corte-stats" style="margin-bottom:20px;"></div>
+
+      <!-- Por departamento -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Ventas por departamento</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Departamento</th><th>Productos vendidos</th><th># Transacciones</th><th>Total</th><th>% del total</th></tr></thead>
+            <tbody id="corte-dept-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detalle de ventas del día -->
+      <div class="card" id="corte-detalle-card">
+        <div class="card-title">Detalle de ventas del día</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Hora</th><th>Producto</th><th>Dept.</th><th>Qty</th><th>Precio unit.</th><th>Total</th></tr></thead>
+            <tbody id="corte-detalle-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRASPASOS -->
+    <section id="s-traspasos">
+      <div class="local-tabs" id="tsp-local-tabs" style="display:none;margin-bottom:14px;gap:8px;"></div>
+      <div class="card" id="traspaso-form-card">
+        <div class="card-title">Nuevo traspaso entre locales</div>
+        <div class="form-grid">
+          <div class="field"><label>Origen (mi local)</label><input id="t-origen" disabled style="color:var(--muted);"></div>
+          <div class="field"><label>Destino</label><select id="t-destino"><option value="">Selecciona local...</option></select></div>
+          <div class="field"><label>Producto</label><select id="t-producto"><option value="">Selecciona...</option></select></div>
+          <div class="field"><label>Cantidad</label><input id="t-qty" type="number" min="1" placeholder="1"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Motivo</label><input id="t-motivo" placeholder="Ej: Falta de stock, excedente de inventario..."></div>
+        </div>
+        <button class="btn btn-primary" onclick="registrarTraspaso()">Enviar traspaso</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Traspasos de mi local</div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>Fecha</th><th>Origen</th><th>Destino</th><th>Producto</th><th>Qty</th><th>Motivo</th></tr></thead>
+          <tbody id="traspaso-tbody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="s-historial">
+      <div class="local-tabs" id="hist-local-tabs"></div>
+      <div class="card">
+        <div class="card-title">Todos los movimientos</div>
+        <div id="hist-list"></div>
+      </div>
+    </section>
+
+    <!-- COMPARAR -->
+    <section id="s-comparar">
+      <h2 class="sec-title">Comparar locales</h2>
+      <div class="compare-grid" id="compare-grid"></div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">Ventas totales</div>
+        <div id="compare-bars"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
