@@ -610,10 +610,13 @@ function renderInventarioFiltrado(inv, isAdmin, canEdit) {
 
     const rows = items.map(p => {
       const qtyCell = canEdit
-        ? `<div style="display:flex;align-items:center;gap:5px;">
-            <button class="btn btn-ghost btn-sm" style="padding:3px 9px;" onclick="cambiarQty('${p.id}',-1)">−</button>
-            <span style="min-width:24px;text-align:center;font-size:13px;">${p.qty}</span>
-            <button class="btn btn-ghost btn-sm" style="padding:3px 9px;" onclick="cambiarQty('${p.id}',1)">+</button>
+        ? `<div style="display:flex;align-items:center;gap:4px;">
+            <button class="btn btn-ghost btn-sm" style="padding:3px 8px;" onclick="cambiarQty('${p.id}',-1)">−</button>
+            <input type="number" min="0" value="${p.qty}"
+              style="width:54px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 6px;color:var(--text);font-size:13px;text-align:center;outline:none;"
+              onclick="this.select()"
+              onchange="editarCampo('${p.id}','qty',parseInt(this.value)||0,this)">
+            <button class="btn btn-ghost btn-sm" style="padding:3px 8px;" onclick="cambiarQty('${p.id}',1)">+</button>
            </div>`
         : `<span style="font-size:13px;">${p.qty}</span>`;
 
