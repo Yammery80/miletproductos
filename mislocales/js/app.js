@@ -192,7 +192,7 @@ function renderAll() { renderSection(currentTab); }
 function renderSection(name) {
   if (name === 'dashboard') renderDashboard();
   if (name === 'inventario') renderInventario(true);
-  if (name === 'ventas') renderVentas();
+  if (name === 'ventas') { renderVentas(); renderPromocionesVenta(); }
   if (name === 'traspasos') renderTraspasos();
   if (name === 'historial') renderHistorial();
   if (name === 'comparar') renderComparar();
@@ -400,9 +400,17 @@ async function renderDashboard() {
   if (cadEl) cadEl.innerHTML = lotes8.length
     ? lotes8.slice(0,5).map(l => {
         const d = diasParaCaducar(l.caduca);
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;">${l.prodNombre} <span style="color:var(--muted);font-size:10px;">(${l.cantidad}u)</span></span>
-          ${badgeCaduca(d)}
+        const precioNormal = l._prod?.precio || 0;
+        const pNombre = l.prodNombre.replace(/'/g, "\\'");
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;gap:8px;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${l.prodNombre} <span style="color:var(--muted);font-size:10px;">(${l.cantidad}u)</span></span>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            ${badgeCaduca(d)}
+            ${precioNormal > 0 ? `<button class="btn btn-sm" style="background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3);font-size:10px;padding:3px 8px;border-radius:6px;white-space:nowrap;"
+              onclick="abrirModalPromocion('${l.prodId}','${pNombre}','${l.id||''}',${l.cantidad},'${l.caduca}',${precioNormal},${dashLocalIdx})">
+              🏷 Promocionar
+            </button>` : ''}
+          </div>
         </div>`;
       }).join('')
     : '<p style="color:var(--muted);font-size:12px;text-align:center;padding:8px;">Sin caducidades próximas</p>';
@@ -2218,3 +2226,267 @@ document.addEventListener('click', e => {
 
 renderLoginUsers();
 initFirebase();
+
+// ================================================================
+// PROMOCIONES
+// ================================================================
+
+// ── Helpers Firebase/Local para promociones ──
+
+async function getPromociones(localIdx) {
+  if (firebaseOk) {
+    const { collection, getDocs, query, where } = window._fs;
+    try {
+      const snap = await getDocs(query(collection(db, 'promociones'), where('localIdx', '==', localIdx), where('activa', '==', true)));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {
+      const snap2 = await getDocs(query(collection(db, 'promociones'), where('localIdx', '==', localIdx)));
+      return snap2.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.activa !== false);
+    }
+  } else {
+    if (!window._localData.promociones) window._localData.promociones = [];
+    return window._localData.promociones.filter(p => p.localIdx === localIdx && p.activa !== false);
+  }
+}
+
+async function guardarPromocion(promo) {
+  if (firebaseOk) {
+    const { collection, addDoc } = window._fs;
+    const ref = await addDoc(collection(db, 'promociones'), promo);
+    return ref.id;
+  } else {
+    if (!window._localData.promociones) window._localData.promociones = [];
+    promo.id = 'promo_' + Date.now();
+    window._localData.promociones.push(promo);
+    window._saveLocal();
+    return promo.id;
+  }
+}
+
+async function desactivarPromocion(promoId) {
+  if (firebaseOk) {
+    const { doc, updateDoc } = window._fs;
+    await updateDoc(doc(db, 'promociones', promoId), { activa: false });
+  } else {
+    const p = (window._localData.promociones || []).find(x => x.id === promoId);
+    if (p) p.activa = false;
+    window._saveLocal();
+  }
+}
+
+// ── Modal Promocionar (desde dashboard lote próximo a caducar) ──
+
+let _promoLoteData = null; // { prodId, prodNombre, loteId, cantidad, caduca, precioNormal, localIdx }
+
+window.abrirModalPromocion = function(prodId, prodNombre, loteId, cantidad, caduca, precioNormal, localIdx) {
+  _promoLoteData = { prodId, prodNombre, loteId, cantidad, caduca, precioNormal, localIdx };
+
+  const dias = diasParaCaducar(caduca);
+  const sugerido = (precioNormal * 0.7).toFixed(2); // sugerir 30% descuento
+
+  document.getElementById('promo-modal-title').textContent = `Promocionar: ${prodNombre}`;
+  document.getElementById('promo-info-caduca').textContent = `Caduca en ${dias} días (${caduca}) · ${cantidad} uds disponibles`;
+  document.getElementById('promo-precio-normal').textContent = `$${parseFloat(precioNormal).toFixed(2)}`;
+  document.getElementById('promo-precio-input').value = sugerido;
+  document.getElementById('promo-preview-precio').textContent = `$${sugerido}`;
+  document.getElementById('promo-preview-desc').textContent =
+    `${Math.round((1 - sugerido / precioNormal) * 100)}% descuento`;
+
+  document.getElementById('modal-promocion').style.display = 'flex';
+  document.getElementById('promo-precio-input').focus();
+};
+
+window.cerrarModalPromocion = function() {
+  document.getElementById('modal-promocion').style.display = 'none';
+  _promoLoteData = null;
+};
+
+window.calcularPreviewPromo = function() {
+  const val = parseFloat(document.getElementById('promo-precio-input').value) || 0;
+  const normal = _promoLoteData?.precioNormal || 1;
+  document.getElementById('promo-preview-precio').textContent = `$${val.toFixed(2)}`;
+  const pct = Math.round((1 - val / normal) * 100);
+  document.getElementById('promo-preview-desc').textContent =
+    pct > 0 ? `${pct}% descuento` : pct === 0 ? 'Sin descuento' : `${Math.abs(pct)}% sobre precio`;
+};
+
+window.guardarPromocionModal = async function() {
+  if (!_promoLoteData) return;
+  const precioPromo = parseFloat(document.getElementById('promo-precio-input').value);
+  if (isNaN(precioPromo) || precioPromo <= 0) {
+    window.toast('⚠ Ingresa un precio válido');
+    return;
+  }
+  const { prodId, prodNombre, loteId, cantidad, caduca, precioNormal, localIdx } = _promoLoteData;
+  const promo = {
+    prodId, prodNombre, loteId, cantidad,
+    cantidadRestante: cantidad,
+    caduca, precioNormal, precioPromo,
+    descuentoPct: Math.round((1 - precioPromo / precioNormal) * 100),
+    localIdx,
+    activa: true,
+    creadoEn: new Date().toISOString(),
+    creadoPor: currentUser.nombre
+  };
+
+  const id = await guardarPromocion(promo);
+  window.cerrarModalPromocion();
+  window.toast(`✓ Promoción creada: ${prodNombre} a $${precioPromo.toFixed(2)}`);
+  pushAlerta(`Promoción activa: "${prodNombre}" a $${precioPromo.toFixed(2)} (caduca ${caduca})`, 'warn');
+
+  // Refrescar dashboard y sección caducidad si están visibles
+  if (document.getElementById('s-dashboard')?.style.display !== 'none') renderDashboard();
+};
+
+// ── Sección Promociones en Ventas ──
+
+let _promoVentaLocalIdx = 0;
+window.switchPromoLocal = function(idx) { _promoVentaLocalIdx = idx; renderPromocionesVenta(); };
+
+async function renderPromocionesVenta() {
+  const isAdmin = currentUser.rol === 'admin';
+  const localIdx = isAdmin ? _promoVentaLocalIdx : (currentUser.localIdx ?? 0);
+
+  const tabsEl = document.getElementById('promo-local-tabs');
+  if (isAdmin && tabsEl) {
+    tabsEl.style.display = 'flex';
+    tabsEl.innerHTML = LOCAL_NAMES.map((n,i) =>
+      `<button class="local-tab ${i===_promoVentaLocalIdx?'active':''}" onclick="switchPromoLocal(${i})">${n}</button>`
+    ).join('');
+  } else if (tabsEl) tabsEl.style.display = 'none';
+
+  const promos = await getPromociones(localIdx);
+  window._promoVentaList = promos; // cache para búsqueda
+
+  _renderPromosList(promos);
+}
+
+function _renderPromosList(promos) {
+  const container = document.getElementById('promo-lista');
+  if (!container) return;
+
+  if (!promos.length) {
+    container.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;">
+      Sin promociones activas en este local</div>`;
+    return;
+  }
+
+  container.innerHTML = promos.map(p => {
+    const dias = diasParaCaducar(p.caduca);
+    const badge = dias <= 0
+      ? `<span style="background:rgba(239,68,68,.15);color:var(--red);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">CADUCADO</span>`
+      : dias <= 3
+        ? `<span style="background:rgba(239,68,68,.15);color:var(--red);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">🚨 ${dias}d</span>`
+        : `<span style="background:rgba(245,158,11,.15);color:var(--amber);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">⏰ ${dias}d</span>`;
+
+    return `
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="font-size:14px;font-weight:600;">${p.prodNombre}</span>
+          ${badge}
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--muted);">Precio normal: <s>$${parseFloat(p.precioNormal).toFixed(2)}</s></span>
+          <span style="font-size:16px;font-weight:700;color:var(--green);">$${parseFloat(p.precioPromo).toFixed(2)}</span>
+          <span style="background:rgba(16,185,129,.12);color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">${p.descuentoPct}% OFF</span>
+          <span style="font-size:11px;color:var(--muted);">Stock: ${p.cantidadRestante ?? p.cantidad} uds</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" min="1" max="${p.cantidadRestante ?? p.cantidad}" value="1"
+          id="promo-qty-${p.id}"
+          style="width:60px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px;color:var(--text);font-size:13px;text-align:center;">
+        <button class="btn btn-primary btn-sm" onclick="venderPromocion('${p.id}')">
+          🛒 Vender
+        </button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--muted);" onclick="terminarPromocion('${p.id}','${p.prodNombre}')">
+          ✕
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.buscarPromocion = function(q) {
+  const all = window._promoVentaList || [];
+  if (!q.trim()) { _renderPromosList(all); return; }
+  const filtered = all.filter(p =>
+    p.prodNombre.toLowerCase().includes(q.toLowerCase()) ||
+    (p.sku || '').toLowerCase().includes(q.toLowerCase())
+  );
+  _renderPromosList(filtered);
+};
+
+window.venderPromocion = async function(promoId) {
+  const promos = window._promoVentaList || [];
+  const promo = promos.find(p => p.id === promoId);
+  if (!promo) return;
+
+  const qtyEl = document.getElementById(`promo-qty-${promoId}`);
+  const qty = parseInt(qtyEl?.value) || 1;
+  const disponible = promo.cantidadRestante ?? promo.cantidad;
+
+  if (qty < 1) { window.toast('⚠ Cantidad mínima: 1'); return; }
+  if (qty > disponible) { window.toast(`⚠ Solo hay ${disponible} uds disponibles`); return; }
+
+  const total = qty * promo.precioPromo;
+  const localIdx = isAdmin_() ? _promoVentaLocalIdx : (currentUser.localIdx ?? 0);
+
+  // 1. Registrar venta normal con precio de promo
+  const venta = {
+    localIdx,
+    producto: promo.prodNombre + ' [PROMO]',
+    productoId: promo.prodId,
+    qty, precio: promo.precioPromo,
+    total, fecha: new Date().toISOString(),
+    esPromocion: true, promoId
+  };
+
+  if (firebaseOk) {
+    const { collection, addDoc, doc, updateDoc, increment } = window._fs;
+    await addDoc(collection(db, 'ventas'), venta);
+    await updateDoc(doc(db, 'inventario', promo.prodId), { qty: increment(-qty) });
+    // Actualizar cantidadRestante en la promo
+    const nuevaQty = disponible - qty;
+    await updateDoc(doc(db, 'promociones', promoId), {
+      cantidadRestante: nuevaQty,
+      activa: nuevaQty > 0
+    });
+  } else {
+    venta.id = Date.now().toString();
+    window._localData.ventas.push(venta);
+    const inv = window._localData.inventario[localIdx] || [];
+    const prod = inv.find(p => p.id === promo.prodId);
+    if (prod) prod.qty = Math.max(0, prod.qty - qty);
+    const nuevaQty = disponible - qty;
+    const lp = (window._localData.promociones || []).find(p => p.id === promoId);
+    if (lp) { lp.cantidadRestante = nuevaQty; lp.activa = nuevaQty > 0; }
+    window._saveLocal();
+  }
+
+  // 2. Actualizar caché inventario
+  if (window._currentInv) {
+    const cp = window._currentInv.find(p => p.id === promo.prodId);
+    if (cp) cp.qty = Math.max(0, (cp.qty || 0) - qty);
+  }
+
+  await logHistorial({ tipo:'venta', localIdx, usuario: currentUser.nombre,
+    descripcion: `Venta PROMO: ${qty}x ${promo.prodNombre} a $${promo.precioPromo.toFixed(2)} — Total: $${total.toFixed(2)}` });
+
+  window.toast(`✓ Venta registrada: ${qty}x ${promo.prodNombre} — $${total.toFixed(2)}`);
+  pushAlerta(`Venta de promo: ${qty}x "${promo.prodNombre}" a $${promo.precioPromo.toFixed(2)}`, 'ok');
+
+  // Refrescar lista
+  renderPromocionesVenta();
+};
+
+window.terminarPromocion = async function(promoId, nombre) {
+  if (!confirm(`¿Desactivar la promoción de "${nombre}"?`)) return;
+  await desactivarPromocion(promoId);
+  window.toast(`Promoción de "${nombre}" desactivada`);
+  renderPromocionesVenta();
+};
+
+function isAdmin_() { return currentUser?.rol === 'admin'; }
+

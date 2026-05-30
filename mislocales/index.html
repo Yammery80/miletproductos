@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Milet Productos</title>
+<title>Mis Locales — Cloud</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -13,7 +13,7 @@
 <!-- ======== LOGIN ======== -->
 <div id="login-screen">
   <div class="login-box">
-    <h1>milet<span>productos</span></h1>
+    <h1>mis<span>locales</span></h1>
     <p>Selecciona tu sucursal e ingresa tu PIN</p>
 
     <div class="login-users" id="login-users-list">
@@ -148,7 +148,7 @@
 <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-left">
-      <div class="brand">milet<span>productos</span></div>
+      <div class="brand">mis<span>locales</span></div>
       <div class="user-pill">
         <div class="avatar" id="nav-avatar"></div>
         <span id="nav-username"></span>
@@ -373,6 +373,24 @@
         </div>
         <button class="btn btn-primary" onclick="registrarVenta()">Registrar venta</button>
       </div>
+
+      <!-- SECCIÓN PROMOCIONES -->
+      <div class="card" style="border:1px solid rgba(245,158,11,.25);background:rgba(245,158,11,.03);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div>
+            <div class="card-title" style="margin:0;display:flex;align-items:center;gap:8px;">
+              🏷 Promociones activas
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin-top:3px;">Productos con descuento por fecha de caducidad próxima</p>
+          </div>
+          <input type="text" placeholder="🔍 Buscar promo..." autocomplete="off"
+            oninput="buscarPromocion(this.value)"
+            style="width:200px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;outline:none;">
+        </div>
+        <div class="local-tabs" id="promo-local-tabs" style="display:none;margin-bottom:12px;gap:8px;"></div>
+        <div id="promo-lista"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">Historial de ventas — <span id="vta-local-label"></span></div>
         <div class="tbl-wrap">
@@ -469,6 +487,43 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MODAL PROMOCION -->
+<div id="modal-promocion" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;width:100%;max-width:420px;position:relative;">
+    <button onclick="cerrarModalPromocion()" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+    <h3 style="font-family:'Syne',sans-serif;font-size:16px;margin-bottom:4px;" id="promo-modal-title">Promocionar producto</h3>
+    <p style="font-size:11px;color:var(--amber);margin-bottom:18px;" id="promo-info-caduca"></p>
+
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:13px;">
+      <span style="color:var(--muted);">Precio normal:</span>
+      <span id="promo-precio-normal" style="font-weight:600;">$0.00</span>
+    </div>
+
+    <div class="field" style="margin-bottom:18px;">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Precio de promoción ($)</label>
+      <input type="number" id="promo-precio-input" step="0.01" min="0.01" placeholder="0.00"
+        oninput="calcularPreviewPromo()"
+        style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:18px;font-weight:700;outline:none;text-align:center;">
+    </div>
+
+    <!-- Preview badge -->
+    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span style="font-size:11px;color:var(--muted);">Precio promo</span>
+      <div style="text-align:right;">
+        <div style="font-size:22px;font-weight:800;color:var(--green);" id="promo-preview-precio">$0.00</div>
+        <div style="font-size:11px;color:var(--green);" id="promo-preview-desc">0% descuento</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="cerrarModalPromocion()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2;background:var(--amber);border-color:var(--amber);" onclick="guardarPromocionModal()">
+        🏷 Activar promoción
+      </button>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="js/app.js"></script>
 </body>
